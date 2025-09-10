@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
+  "type": "module",
   "scripts": {
     "server": "node server.js",
     "start": "node server.js"
   },
-  "types": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",
