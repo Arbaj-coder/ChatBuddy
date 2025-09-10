@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import "tailwindcss";
+
+*{
+  font-family: "Outfit" , sans-serif;
+}
+
+::-webkit-scrollbar{
+  display: none;
+}
+
+.fluid1 {
+  background: #000;
+  width: 100%;
+  min-height: 100vh; /* so it covers full page */
+  overflow-x: hidden;
+
+  background-image: url("assets/fluid1.jpg");
+  background-size: cover;
+  background-repeat: repeat; /* allow movement */
+  animation: moveBg 20s linear infinite;
+}
+
+@keyframes moveBg {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 1000px 0; /* move horizontally */
+  }
+}
+
+.fluid2 {
+  background: #000;
+  width: 100%;
+  min-height: 100vh; /* so it covers full page */
+  overflow-x: hidden;
+
+  background-image: url("assets/fluid2.png");
+  background-size: cover;
+  background-repeat: repeat; /* allow movement */
+  animation: moveBg1 20s linear infinite;
+}
+
+@keyframes moveBg1 {
+  0% {
+    background-position: 1000px -100px;
+  }
+  100% {
+    background-position: 0 -100px; /* move horizontally */
+  }
+}
