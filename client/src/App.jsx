@@ -24,7 +24,7 @@ function App() {
         />
       </video> */}
 
-      <img src="https://img.freepik.com/free-photo/studio-background-concept-abstract-empty-light-gradient-purple-studio-room-background-product-plain-studio-background_1258-54504.jpg?t=st=1757433641~exp=1757437241~hmac=fc7b0b2d462c927bcd20454bd3ec3440d56b787aa314ee27f0bd3f5d50614b84&w=1480" alt="" className="absolute top-0 left-0 w-full h-full object-cover -z-10"/>
+      <img src="/w12.jpg" alt="" className="absolute top-0 left-0 w-full h-full object-cover -z-10"/>
 
       {/* Page Content */}
       <Routes>
