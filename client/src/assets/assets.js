@@ -23,6 +23,7 @@ import img1 from './img1.jpg'
 import img2 from './img2.jpg'
 import logo12 from './logo12.png'
 import logo13 from './logo13.png'
+import logo14 from './logo14.png'
 
 const assets = {
     avatar_icon,
@@ -39,7 +40,8 @@ const assets = {
     bgImage,
     profile_martin,
     logo12,
-    logo13
+    logo13,
+    logo14
 }
 
 export default assets;
