@@ -1,10 +1,13 @@
 // Chatcontainer.jsx
+// Chatcontainer.jsx
 import React, { useContext, useEffect, useRef, useState } from "react";
 import assets from "../assets/assets";
 import { formatMessageTime } from "../lib/utills";
 import { ChatContext } from "../../context/ChatContex";
 import { AuthContext } from "../../context/AuthContext";
 import CallModal from "./CallModel";
+import useCall from "../hooks/useCall";
+// import useCall from './hooks/useCall'; // Make sure this path is correct
 
 const Chatcontainer = ({ setShowProfile }) => {
   const scrollEnd = useRef();
@@ -15,15 +18,19 @@ const Chatcontainer = ({ setShowProfile }) => {
 
   const [input, setInput] = useState("");
 
-  // ---- CALL STATE ----
-  const [incomingCall, setIncomingCall] = useState(null);
-  const [isCalling, setIsCalling] = useState(false);
-  const [inCall, setInCall] = useState(false);
-
-  const peerRef = useRef(null);
-  const localStreamRef = useRef(null);
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
+  // -------------------- USE THE useCall HOOK --------------------
+  // All the call logic is now managed by the useCall hook.
+  const {
+    incomingCall,
+    isCalling,
+    inCall,
+    localStream,
+    remoteStream,
+    callUser,
+    acceptCall,
+    endCall,
+    setIncomingCall,
+  } = useCall({ socket, authUser, selectedUser });
 
   // -------------------- Chat Handlers --------------------
   const handleSendMessage = async (e) => {
@@ -59,129 +66,35 @@ const Chatcontainer = ({ setShowProfile }) => {
     }
   }, [messages]);
 
-  // -------------------- CALL HANDLERS --------------------
-  const createPeerConnection = async () => {
-    peerRef.current = new RTCPeerConnection();
 
-    // Local tracks
-    localStreamRef.current.getTracks().forEach((track) => {
-      peerRef.current.addTrack(track, localStreamRef.current);
-    });
-
-    // Remote tracks
-    peerRef.current.ontrack = (event) => {
-      console.log("📡 Remote stream received:", event.streams[0]);
-      setRemoteStream(event.streams[0]);
-    };
-
-    // ICE candidates
-    peerRef.current.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit("ice-candidate", {
-          to: selectedUser._id,
-          candidate: event.candidate,
-        });
-      }
-    };
-  };
-
-  const startCall = async () => {
-    if (!selectedUser?._id) return;
-
-    setIsCalling(true);
-
-    localStreamRef.current = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    setLocalStream(localStreamRef.current);
-
-    await createPeerConnection();
-
-    const offer = await peerRef.current.createOffer();
-    await peerRef.current.setLocalDescription(offer);
-
-    socket.emit("call-user", {
-      to: selectedUser._id,
-      offer,
-      from: { _id: authUser._id, name: authUser.fullName },
-    });
-  };
-
-  const acceptCall = async (offer, callerId) => {
-    localStreamRef.current = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    setLocalStream(localStreamRef.current);
-
-    await createPeerConnection();
-
-    await peerRef.current.setRemoteDescription(new RTCSessionDescription(offer));
-
-    const answer = await peerRef.current.createAnswer();
-    await peerRef.current.setLocalDescription(answer);
-
-    socket.emit("answer-call", {
-      to: callerId,
-      answer,
-    });
-
-    setIncomingCall(null);
-    setInCall(true);
-  };
-
-  const endCall = () => {
-    if (peerRef.current) {
-      peerRef.current.close();
-      peerRef.current = null;
-    }
-    setInCall(false);
-    setIsCalling(false);
-    setIncomingCall(null);
-    setLocalStream(null);
-    setRemoteStream(null);
-
-    if (selectedUser?._id) {
-      socket.emit("end-call", { toUserId: selectedUser._id });
+  // -------------------- NEW CALL HANDLERS using useCall hook --------------------
+  const handleStartCall = () => {
+    if (selectedUser) {
+      // We pass `video: true` to indicate a video call
+      callUser({ toUserId: selectedUser._id, video: true });
     }
   };
 
-  // -------------------- SOCKET LISTENERS --------------------
-  useEffect(() => {
-    if (!socket) return;
+  const handleAcceptCall = () => {
+    if (incomingCall) {
+      acceptCall({
+        fromUserId: incomingCall.fromUserId,
+        sdp: incomingCall.sdp,
+        video: true,
+      });
+    }
+  };
 
-    socket.on("incoming-call", ({ from, offer }) => {
-      setIncomingCall({ from, offer });
-    });
+  const handleDeclineCall = () => {
+    setIncomingCall(null);
+  };
 
-    socket.on("call-answered", async ({ answer }) => {
-      await peerRef.current.setRemoteDescription(
-        new RTCSessionDescription(answer)
-      );
-      setInCall(true);
-      setIsCalling(false);
-    });
+  const handleEndCall = () => {
+    // We need to know who to notify about the call ending.
+    const remoteUserId = selectedUser?._id || incomingCall?.fromUserId;
+    endCall(remoteUserId);
+  }
 
-    socket.on("ice-candidate", async ({ candidate }) => {
-      try {
-        await peerRef.current.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (err) {
-        console.error("Error adding ICE candidate", err);
-      }
-    });
-
-    socket.on("call-ended", () => {
-      endCall();
-    });
-
-    return () => {
-      socket.off("incoming-call");
-      socket.off("call-answered");
-      socket.off("ice-candidate");
-      socket.off("call-ended");
-    };
-  }, [socket]);
 
   // -------------------- RENDER --------------------
   return selectedUser ? (
@@ -204,9 +117,9 @@ const Chatcontainer = ({ setShowProfile }) => {
           )}
         </p>
 
-        {/* 📞 Call Button */}
+        {/* 📞 Call Button -> Updated to use handleStartCall */}
         <button
-          onClick={startCall}
+          onClick={handleStartCall}
           className="bg-green-500 text-white px-3 py-1 rounded-full text-sm"
         >
           Call
@@ -298,7 +211,7 @@ const Chatcontainer = ({ setShowProfile }) => {
         />
       </div>
 
-      {/* Call Modal */}
+      {/* Call Modal -> Updated with new handlers */}
       {(incomingCall || isCalling || inCall) && (
         <CallModal
           incomingCall={incomingCall}
@@ -306,13 +219,11 @@ const Chatcontainer = ({ setShowProfile }) => {
           inCall={inCall}
           localStream={localStream}
           remoteStream={remoteStream}
-          callerName={incomingCall?.from?.name}
+          callerName={incomingCall?.fromName}
           calleeName={selectedUser?.fullName}
-          onAccept={() =>
-            acceptCall(incomingCall.offer, incomingCall.from._id)
-          }
-          onDecline={() => setIncomingCall(null)}
-          onEnd={endCall}
+          onAccept={handleAcceptCall}
+          onDecline={handleDeclineCall}
+          onEnd={handleEndCall}
         />
       )}
     </div>
@@ -325,4 +236,3 @@ const Chatcontainer = ({ setShowProfile }) => {
 };
 
 export default Chatcontainer;
-
